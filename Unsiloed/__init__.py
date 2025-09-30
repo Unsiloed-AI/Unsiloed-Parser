@@ -3,6 +3,7 @@ import os
 import tempfile
 import requests
 from Unsiloed.services.chunking import process_document_chunking, determine_file_type_from_url
+from Unsiloed.services.rag import RAGSystem, rag_query
 from Unsiloed.utils.chunking import ChunkingStrategy
 from Unsiloed.utils.web_utils import validate_url, get_content_type_from_url
 
