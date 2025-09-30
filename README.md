@@ -72,6 +72,13 @@
 
 
 
+### Agentic RAG Retrieval System
+- **Multi-hop Queries**: Decomposes complex queries into simpler sub-queries and performs iterative retrieval
+- **Negation Handling**: Processes queries with negation words (not, without, except) effectively
+- **Vector Search**: Uses OpenAI embeddings for semantic similarity search
+- **Document Integration**: Seamlessly works with existing chunking strategies
+- **Agentic Behavior**: Uses LLM reasoning to generate follow-up queries and improve retrieval
+
 ###  OpenAI Integration
 - Uses OpenAI GPT-4o for semantic chunking
 - Uses Unsiloed finetuned Yolo model for segmentation (https://huggingface.co/mubashiross/Unsiloed_YOLO_MODEL)
@@ -227,6 +234,41 @@ async def async_processing():
 
 # Run async processing
 async_result = asyncio.run(async_processing())
+```
+
+### Agentic RAG Retrieval Usage
+
+```python
+import os
+import Unsiloed
+
+# Set up OpenAI API key
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+
+# Initialize RAG system
+rag = Unsiloed.services.rag.RAGSystem()
+
+# Add documents to the system
+documents = ["./document1.pdf", "./document2.docx"]
+rag.add_documents_from_files(documents, strategy="semantic")
+
+# Query with multi-hop capability (great for complex questions)
+result = rag.query("How do I install Unsiloed and configure it for document processing?", max_hops=3)
+
+print(f"Found {result['total_results']} results across {result['total_steps']} search steps")
+
+# Query with negation handling
+result = rag.query("What are the features of Unsiloed that are not related to file processing?")
+
+# Simple query
+result = rag.query("What are the main features of Unsiloed?")
+
+# Using the convenience function
+result = Unsiloed.services.rag.rag_query(
+    "What is the main purpose of Unsiloed?",
+    documents=["./README.md"],
+    max_hops=2
+)
 ```
 
 ### Supported File Types
