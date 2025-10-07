@@ -15,6 +15,8 @@ Key Features:
 - Configurable parameters through ChunkingConfig class
 - Comprehensive error handling and validation
 - Production-ready logging and monitoring
+- Enhanced reading order preservation for multi-column documents
+- JSON and Markdown structure-aware chunking
 
 Dependencies:
 - OpenAI API for semantic analysis
@@ -24,7 +26,7 @@ Dependencies:
 - PyPDF2 for PDF handling
 
 Author: Unsiloed Team
-Version: 2.1.0
+Version: 2.2.0
 """
 
 import asyncio
@@ -51,27 +53,32 @@ logger = logging.getLogger(__name__)
 # Configuration class for centralized settings
 class ChunkingConfig:
     """Centralized configuration for chunking operations."""
-    
+
     DEFAULT_OPENAI_CONFIDENCE_THRESHOLD = 0.7
     OPENAI_MODEL = "gpt-4o"
     OPENAI_MAX_TOKENS = 300
     OPENAI_TEMPERATURE = 0.1
     OPENAI_TIMEOUT = 60.0
     OPENAI_MAX_RETRIES = 2
-    
+
     DEFAULT_MAX_CONCURRENT_CALLS = 15
     DEFAULT_EXTRACTION_CONCURRENT_CALLS = 5
     DEFAULT_GROUPING_CONCURRENT_CALLS = 5
-    
+
     DEFAULT_CHUNK_SIZE = 1000
     DEFAULT_OVERLAP = 100
     MAX_TEXT_PREVIEW_LENGTH = 80
     LARGE_TEXT_THRESHOLD = 25000
-    
+
     READING_ORDER_TOLERANCE = 0.02
-    
+
     MAX_ELEMENTS_PER_GROUP = 5
     HEURISTIC_CONFIDENCE = 0.8
+
+    MULTI_COLUMN_TOLERANCE = 0.15
+    READING_ORDER_MIN_CONFIDENCE = 0.6
+    PRESERVE_MARKDOWN_STRUCTURE = True
+    JSON_STRUCTURE_AWARE = True
 
 DEFAULT_OPENAI_CONFIDENCE_THRESHOLD = ChunkingConfig.DEFAULT_OPENAI_CONFIDENCE_THRESHOLD
 
@@ -483,22 +490,50 @@ def page_based_chunking(pdf_path: str) -> List[Dict[str, Any]]:
         raise DocumentProcessingError(f"Failed to process PDF: {str(e)}") from e
 
 
-def paragraph_chunking(text: str) -> List[Dict[str, Any]]:
+def paragraph_chunking(text: str, file_type: str = "text") -> List[Dict[str, Any]]:
     """
-    Split text by paragraphs.
+    Split text by paragraphs with enhanced reading order preservation.
 
     Args:
         text: The text to chunk
+        file_type: Type of document for reading order optimization
 
     Returns:
-        List of chunks with metadata
-        
+        List of chunks with metadata and preserved reading order
+
     Raises:
         InvalidConfigurationError: When text parameter is invalid
     """
     if not isinstance(text, str):
         raise InvalidConfigurationError(f"text must be a string, got {type(text)}")
-    
+
+    # Analyze reading order first for structured documents
+    if file_type in ["markdown", "json"]:
+        reading_order_segments = analyze_reading_order_for_text(text, file_type)
+
+        # Create chunks based on reading order segments
+        chunks = []
+        for i, segment in enumerate(reading_order_segments):
+            chunk_text = segment['content']
+
+            chunks.append(
+                {
+                    "text": chunk_text,
+                    "metadata": {
+                        "start_char": segment['metadata']['start_char'],
+                        "end_char": segment['metadata']['end_char'],
+                        "strategy": f"paragraph_reading_order_{file_type}",
+                        "reading_order_index": i,
+                        "element_type": segment['element_type'],
+                        "confidence": segment['metadata']['confidence']
+                    },
+                }
+            )
+
+        logger.info(f"Created {len(chunks)} reading order aware paragraph chunks for {file_type}")
+        return chunks
+
+    # Original logic for plain text
     # Split text by double newlines to identify paragraphs
     paragraphs = text.split("\n\n")
 
@@ -523,6 +558,7 @@ def paragraph_chunking(text: str) -> List[Dict[str, Any]]:
                     "start_char": start_position,
                     "end_char": end_position,
                     "strategy": "paragraph",
+                    "reading_order_index": len(chunks),
                 },
             }
         )
@@ -533,22 +569,75 @@ def paragraph_chunking(text: str) -> List[Dict[str, Any]]:
     return chunks
 
 
-def heading_chunking(text: str) -> List[Dict[str, Any]]:
+def heading_chunking(text: str, file_type: str = "text") -> List[Dict[str, Any]]:
     """
-    Split text by headings (identified by heuristics).
+    Split text by headings (identified by heuristics) with reading order preservation.
 
     Args:
         text: The text to chunk
+        file_type: Type of document for reading order optimization
 
     Returns:
-        List of chunks with metadata
-        
+        List of chunks with metadata and preserved reading order
+
     Raises:
         InvalidConfigurationError: When text parameter is invalid
     """
     if not isinstance(text, str):
         raise InvalidConfigurationError(f"text must be a string, got {type(text)}")
-    
+
+    # For markdown files, use enhanced reading order analysis
+    if file_type == "markdown":
+        reading_order_segments = analyze_reading_order_for_text(text, file_type)
+
+        # Group segments by headings
+        chunks = []
+        current_heading = "Introduction"
+        current_content = []
+
+        for segment in reading_order_segments:
+            if segment['element_type'] == 'heading':
+                # Save previous chunk if it has content
+                if current_content:
+                    chunk_text = ' '.join([s['content'] for s in current_content])
+                    if chunk_text.strip():
+                        chunks.append({
+                            "text": chunk_text,
+                            "metadata": {
+                                "heading": current_heading,
+                                "start_char": current_content[0]['metadata']['start_char'],
+                                "end_char": current_content[-1]['metadata']['end_char'],
+                                "strategy": f"heading_reading_order_{file_type}",
+                                "element_count": len(current_content),
+                                "reading_order_start": current_content[0]['reading_order_index'],
+                            },
+                        })
+                    current_content = []
+
+                current_heading = segment['content']
+            else:
+                current_content.append(segment)
+
+        # Add final chunk
+        if current_content:
+            chunk_text = ' '.join([s['content'] for s in current_content])
+            if chunk_text.strip():
+                chunks.append({
+                    "text": chunk_text,
+                    "metadata": {
+                        "heading": current_heading,
+                        "start_char": current_content[0]['metadata']['start_char'],
+                        "end_char": current_content[-1]['metadata']['end_char'],
+                        "strategy": f"heading_reading_order_{file_type}",
+                        "element_count": len(current_content),
+                        "reading_order_start": current_content[0]['reading_order_index'],
+                    },
+                })
+
+        logger.info(f"Created {len(chunks)} reading order aware heading chunks for {file_type}")
+        return chunks
+
+    # Original logic for other file types
     heading_patterns = [
         r"^#{1,6}\s+.+$",  # Markdown headings
         r"^[A-Z][A-Za-z\s]+$",  # All caps or title case single line
@@ -580,6 +669,7 @@ def heading_chunking(text: str) -> List[Dict[str, Any]]:
                             "start_char": current_start,
                             "end_char": current_start + len(chunk_text),
                             "strategy": "heading",
+                            "reading_order_index": len(chunks),
                         },
                     }
                 )
@@ -602,6 +692,7 @@ def heading_chunking(text: str) -> List[Dict[str, Any]]:
                     "start_char": current_start,
                     "end_char": current_start + len(chunk_text),
                     "strategy": "heading",
+                    "reading_order_index": len(chunks),
                 },
             }
         )
@@ -652,12 +743,12 @@ def semantic_chunking(text_or_file_path: Union[str, List[Image.Image]], max_conc
     logger.info(f"🚀 Using YOLO-based semantic segmentation with PARALLEL OpenAI calls (max {max_concurrent_calls} concurrent)")
     
     try:
-        # For text-only input, fall back to legacy processing
+        # For text-only input, use enhanced reading order aware processing
         if isinstance(text_or_file_path, str) and not text_or_file_path.endswith(('.pdf', '.png', '.jpg', '.jpeg')):
-            logger.warning("Text input detected, falling back to legacy semantic chunking")
-            legacy_chunks = _legacy_semantic_chunking(text_or_file_path)
+            logger.info("Text input detected, applying reading order aware semantic chunking")
+            enhanced_chunks = _enhanced_text_semantic_chunking(text_or_file_path)
             return {
-                'chunks': legacy_chunks,
+                'chunks': enhanced_chunks,
                 'image_dimensions': []
             }
         
@@ -1414,8 +1505,499 @@ def _fallback_heuristic_grouping(bbox_results: List[Dict[str, Any]]) -> List[Dic
     return semantic_chunks
 
 
+def _enhanced_text_semantic_chunking(text: str) -> List[Dict[str, Any]]:
+    """
+    Enhanced semantic chunking for text with reading order preservation.
+
+    Args:
+        text: The text content to chunk
+
+    Returns:
+        List of chunks with preserved reading order
+    """
+    # First analyze the text structure and reading order
+    file_type = "text"  # Default, but we could detect this
+
+    # Check if it looks like markdown or JSON
+    if text.strip().startswith('{') and text.strip().endswith('}'):
+        file_type = "json"
+    elif any(line.strip().startswith('#') for line in text.split('\n')[:10]):
+        file_type = "markdown"
+
+    # Get reading order segments
+    reading_order_segments = analyze_reading_order_for_text(text, file_type)
+
+    # Create chunks that respect the reading order
+    chunks = []
+    current_chunk = {
+        'content': [],
+        'start_idx': 0,
+        'metadata': []
+    }
+
+    for i, segment in enumerate(reading_order_segments):
+        content = segment['content']
+        metadata = segment['metadata']
+
+        # Check if we should start a new chunk (based on element type and size)
+        should_split = (
+            segment['element_type'] in ['heading', 'title', 'section-header'] or
+            len(' '.join(current_chunk['content'])) > ChunkingConfig.DEFAULT_CHUNK_SIZE * 0.8
+        )
+
+        if should_split and current_chunk['content']:
+            # Finalize current chunk
+            chunk_text = ' '.join(current_chunk['content'])
+            chunk_metadata = {
+                'strategy': f'semantic_reading_order_{file_type}',
+                'start_char': current_chunk['metadata'][0]['start_char'] if current_chunk['metadata'] else 0,
+                'end_char': current_chunk['metadata'][-1]['end_char'] if current_chunk['metadata'] else len(chunk_text),
+                'reading_order_start': current_chunk['start_idx'],
+                'reading_order_end': i - 1,
+                'element_count': len(current_chunk['content']),
+                'primary_element_type': max(set(m['element_type'] for m in current_chunk['metadata']),
+                                          key=lambda x: sum(1 for meta in current_chunk['metadata'] if meta['element_type'] == x)) if current_chunk['metadata'] else 'text'
+            }
+
+            chunks.append({
+                'text': chunk_text,
+                'metadata': chunk_metadata
+            })
+
+            # Start new chunk
+            current_chunk = {
+                'content': [content],
+                'start_idx': i,
+                'metadata': [metadata]
+            }
+        else:
+            current_chunk['content'].append(content)
+            current_chunk['metadata'].append(metadata)
+
+    # Add final chunk
+    if current_chunk['content']:
+        chunk_text = ' '.join(current_chunk['content'])
+        chunk_metadata = {
+            'strategy': f'semantic_reading_order_{file_type}',
+            'start_char': current_chunk['metadata'][0]['start_char'] if current_chunk['metadata'] else 0,
+            'end_char': current_chunk['metadata'][-1]['end_char'] if current_chunk['metadata'] else len(chunk_text),
+            'reading_order_start': current_chunk['start_idx'],
+            'reading_order_end': len(reading_order_segments) - 1,
+            'element_count': len(current_chunk['content']),
+            'primary_element_type': max(set(m['element_type'] for m in current_chunk['metadata']),
+                                      key=lambda x: sum(1 for meta in current_chunk['metadata'] if meta['element_type'] == x)) if current_chunk['metadata'] else 'text'
+        }
+
+        chunks.append({
+            'text': chunk_text,
+            'metadata': chunk_metadata
+        })
+
+    logger.info(f"Created {len(chunks)} reading order aware semantic chunks")
+    return chunks
+
+
 def _legacy_semantic_chunking(text: str) -> List[Dict[str, Any]]:
     """
     Legacy semantic chunking using OpenAI text analysis (for backward compatibility).
     """
     return semantic_chunk_with_structured_output(text)
+
+
+def detect_multi_column_layout(elements: List[Dict[str, Any]], image_width: int, image_height: int) -> bool:
+    """
+    Detect if a document has a multi-column layout based on element positioning.
+
+    Args:
+        elements: List of document elements with bbox coordinates
+        image_width: Width of the document image
+        image_height: Height of the document image
+
+    Returns:
+        True if multi-column layout is detected, False otherwise
+    """
+    if not elements or len(elements) < 3:
+        return False
+
+    # Group elements by Y-coordinate to detect rows
+    tolerance = ChunkingConfig.MULTI_COLUMN_TOLERANCE
+    tolerance_pixels = tolerance * image_height
+
+    # Sort elements by Y-coordinate
+    sorted_elements = sorted(elements, key=lambda x: x.get('center_y', 0))
+
+    # Group into potential rows based on Y-coordinate proximity
+    rows = []
+    current_row = [sorted_elements[0]]
+
+    for element in sorted_elements[1:]:
+        current_y = element.get('center_y', 0)
+        row_y_centers = [e.get('center_y', 0) for e in current_row]
+        row_y_avg = sum(row_y_centers) / len(row_y_centers)
+
+        if abs(current_y - row_y_avg) <= tolerance_pixels:
+            current_row.append(element)
+        else:
+            if len(current_row) >= 2:  # Only consider rows with multiple elements
+                rows.append(current_row)
+            current_row = [element]
+
+    if len(current_row) >= 2:
+        rows.append(current_row)
+
+    # Check for multi-column pattern in rows
+    multi_column_rows = 0
+    total_rows = len(rows)
+
+    for row in rows:
+        if len(row) >= 2:
+            # Sort row elements by X-coordinate
+            sorted_row = sorted(row, key=lambda x: x.get('center_x', 0))
+            x_positions = [e.get('center_x', 0) for e in sorted_row]
+
+            # Check if elements are spread across significant portion of page width
+            min_x = min(x_positions)
+            max_x = max(x_positions)
+            width_coverage = (max_x - min_x) / image_width
+
+            # If elements span more than 60% of page width, likely multi-column
+            if width_coverage > 0.6:
+                multi_column_rows += 1
+
+    # If more than 30% of rows show multi-column pattern, consider it multi-column
+    return (multi_column_rows / total_rows) > 0.3 if total_rows > 0 else False
+
+
+def analyze_reading_order_for_text(text: str, file_type: str) -> List[Dict[str, Any]]:
+    """
+    Analyze reading order for text-based documents (JSON, Markdown, HTML).
+
+    Args:
+        text: The document text content
+        file_type: Type of document (json, markdown, html)
+
+    Returns:
+        List of text segments with reading order metadata
+    """
+    segments = []
+
+    if file_type == "markdown":
+        segments = _analyze_markdown_reading_order(text)
+    elif file_type == "json":
+        segments = _analyze_json_reading_order(text)
+    else:
+        # For HTML and plain text, use paragraph-based analysis
+        segments = _analyze_text_reading_order(text)
+
+    # Add reading order indices
+    for i, segment in enumerate(segments):
+        segment['reading_order_index'] = i
+        segment['reading_order_confidence'] = 0.9  # High confidence for structured text
+
+    return segments
+
+
+def _analyze_markdown_reading_order(markdown_text: str) -> List[Dict[str, Any]]:
+    """
+    Analyze reading order for Markdown documents, preserving structure.
+
+    Args:
+        markdown_text: Markdown content
+
+    Returns:
+        List of markdown segments with reading order
+    """
+    lines = markdown_text.split('\n')
+    segments = []
+    current_segment = {
+        'content': '',
+        'element_type': 'text',
+        'level': 0,
+        'start_line': 0,
+        'end_line': 0
+    }
+
+    for i, line in enumerate(lines):
+        stripped_line = line.strip()
+
+        # Detect headings
+        if re.match(r'^#{1,6}\s+', stripped_line):
+            # Save previous segment if it has content
+            if current_segment['content'].strip():
+                current_segment['end_line'] = i - 1
+                segments.append(current_segment.copy())
+
+            # Create new heading segment
+            heading_level = len(re.match(r'^(#{1,6})\s+', stripped_line).group(1))
+            current_segment = {
+                'content': stripped_line,
+                'element_type': 'heading',
+                'level': heading_level,
+                'start_line': i,
+                'end_line': i
+            }
+
+        # Detect lists
+        elif re.match(r'^[\d\*\-\+]\s+', stripped_line) or (stripped_line.startswith(' ') and re.match(r'^[\d\*\-\+]\s+', stripped_line.lstrip())):
+            if current_segment.get('element_type') != 'list':
+                # Save previous segment
+                if current_segment['content'].strip():
+                    current_segment['end_line'] = i - 1
+                    segments.append(current_segment.copy())
+
+                # Start new list segment
+                current_segment = {
+                    'content': stripped_line,
+                    'element_type': 'list',
+                    'level': 0,
+                    'start_line': i,
+                    'end_line': i
+                }
+            else:
+                # Continue list
+                current_segment['content'] += '\n' + stripped_line
+                current_segment['end_line'] = i
+
+        # Detect code blocks
+        elif stripped_line.startswith('```'):
+            if current_segment.get('element_type') != 'code_block':
+                # Save previous segment
+                if current_segment['content'].strip():
+                    current_segment['end_line'] = i - 1
+                    segments.append(current_segment.copy())
+
+                # Start new code block segment
+                current_segment = {
+                    'content': stripped_line,
+                    'element_type': 'code_block',
+                    'level': 0,
+                    'start_line': i,
+                    'end_line': i
+                }
+            else:
+                # End code block
+                current_segment['content'] += '\n' + stripped_line
+                current_segment['end_line'] = i
+
+        # Regular text content
+        else:
+            if current_segment.get('element_type') == 'text':
+                if current_segment['content']:
+                    current_segment['content'] += '\n' + stripped_line
+                else:
+                    current_segment['content'] = stripped_line
+                current_segment['end_line'] = i
+            else:
+                # Save previous segment
+                if current_segment['content'].strip():
+                    current_segment['end_line'] = i - 1
+                    segments.append(current_segment.copy())
+
+                # Start new text segment
+                current_segment = {
+                    'content': stripped_line,
+                    'element_type': 'text',
+                    'level': 0,
+                    'start_line': i,
+                    'end_line': i
+                }
+
+    # Add final segment
+    if current_segment['content'].strip():
+        current_segment['end_line'] = len(lines) - 1
+        segments.append(current_segment)
+
+    # Convert to standard format with estimated positions
+    result_segments = []
+    current_char_pos = 0
+
+    for segment in segments:
+        content = segment['content']
+        char_length = len(content)
+
+        result_segments.append({
+            'content': content,
+            'element_type': segment['element_type'],
+            'metadata': {
+                'start_char': current_char_pos,
+                'end_char': current_char_pos + char_length,
+                'level': segment.get('level', 0),
+                'confidence': 0.9
+            }
+        })
+
+        current_char_pos += char_length + 1  # +1 for newline
+
+    return result_segments
+
+
+def _analyze_json_reading_order(json_text: str) -> List[Dict[str, Any]]:
+    """
+    Analyze reading order for JSON documents, considering structure.
+
+    Args:
+        json_text: JSON content
+
+    Returns:
+        List of JSON segments with reading order
+    """
+    try:
+        # Try to parse JSON to understand structure
+        data = json.loads(json_text)
+        return _analyze_json_structure(data, json_text)
+    except json.JSONDecodeError:
+        # If not valid JSON, treat as text
+        return _analyze_text_reading_order(json_text)
+
+
+def _analyze_json_structure(data, original_text: str) -> List[Dict[str, Any]]:
+    """
+    Analyze JSON structure to determine reading order.
+
+    Args:
+        data: Parsed JSON data
+        original_text: Original JSON text
+
+    Returns:
+        List of JSON segments with reading order
+    """
+    segments = []
+
+    def extract_segments(obj, path="", depth=0):
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                key_path = f"{path}.{key}" if path else key
+
+                # Add key as a segment
+                segments.append({
+                    'content': f'"{key}": ',
+                    'element_type': 'key',
+                    'path': key_path,
+                    'depth': depth
+                })
+
+                # Recursively process value
+                extract_segments(value, key_path, depth + 1)
+
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                item_path = f"{path}[{i}]"
+
+                # Add array index as a segment
+                segments.append({
+                    'content': f'[{i}]: ',
+                    'element_type': 'array_item',
+                    'path': item_path,
+                    'depth': depth
+                })
+
+                # Recursively process item
+                extract_segments(item, item_path, depth + 1)
+
+        else:
+            # Primitive value
+            segments.append({
+                'content': json.dumps(obj),
+                'element_type': 'value',
+                'path': path,
+                'depth': depth
+            })
+
+    extract_segments(data)
+
+    # Sort segments by depth (top to bottom) then by path (left to right in structure)
+    segments.sort(key=lambda x: (x['depth'], x['path']))
+
+    # Convert to standard format with estimated positions
+    result_segments = []
+    current_char_pos = 0
+
+    for i, segment in enumerate(segments):
+        content = segment['content']
+        char_length = len(content)
+
+        result_segments.append({
+            'content': content,
+            'element_type': segment['element_type'],
+            'metadata': {
+                'start_char': current_char_pos,
+                'end_char': current_char_pos + char_length,
+                'path': segment['path'],
+                'depth': segment['depth'],
+                'confidence': 0.8
+            }
+        })
+
+        current_char_pos += char_length + 1  # +1 for spacing
+
+    return result_segments
+
+
+def _analyze_text_reading_order(text: str) -> List[Dict[str, Any]]:
+    """
+    Analyze reading order for plain text documents.
+
+    Args:
+        text: Plain text content
+
+    Returns:
+        List of text segments with reading order
+    """
+    # Split by paragraphs
+    paragraphs = re.split(r'\n\s*\n', text)
+
+    result_segments = []
+    current_char_pos = 0
+
+    for i, paragraph in enumerate(paragraphs):
+        if paragraph.strip():
+            char_length = len(paragraph)
+
+            result_segments.append({
+                'content': paragraph,
+                'element_type': 'paragraph',
+                'metadata': {
+                    'start_char': current_char_pos,
+                    'end_char': current_char_pos + char_length,
+                    'confidence': 0.7
+                }
+            })
+
+            current_char_pos += char_length + 2  # +2 for paragraph break
+
+    return result_segments
+
+
+def preserve_reading_order_in_chunks(chunks: List[Dict[str, Any]], file_type: str) -> List[Dict[str, Any]]:
+    """
+    Ensure chunks maintain proper reading order for multi-column documents.
+
+    Args:
+        chunks: List of chunks to reorder
+        file_type: Type of document
+
+    Returns:
+        Chunks with preserved reading order
+    """
+    if not chunks:
+        return chunks
+
+    # For semantic chunks, they should already have reading order
+    # For other chunk types, apply reading order preservation
+    if chunks[0].get('metadata', {}).get('strategy') not in ['semantic', 'semantic_openai_boundary_detection']:
+        logger.info(f"Applying reading order preservation for {file_type} chunks")
+
+        # Sort chunks by their position in the document
+        if file_type in ['json', 'markdown']:
+            # For structured documents, sort by start character position
+            chunks.sort(key=lambda x: x.get('metadata', {}).get('start_char', 0))
+        else:
+            # For plain text, maintain original order but add reading order metadata
+            pass
+
+        # Add reading order indices
+        for i, chunk in enumerate(chunks):
+            if 'reading_order_index' not in chunk.get('metadata', {}):
+                chunk['metadata']['reading_order_index'] = i
+
+    return chunks

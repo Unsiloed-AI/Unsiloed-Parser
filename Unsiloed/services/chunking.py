@@ -4,6 +4,7 @@ from Unsiloed.utils.chunking import (
     paragraph_chunking,
     heading_chunking,
     semantic_chunking,
+    preserve_reading_order_in_chunks,
 )
 from Unsiloed.utils.openai import (
     extract_text_from_pdf,
@@ -66,17 +67,19 @@ def process_document_chunking(
         if strategy == "fixed":
             chunks = fixed_size_chunking(text, chunk_size, overlap)
         elif strategy == "paragraph":
-            chunks = paragraph_chunking(text)
+            chunks = paragraph_chunking(text, file_type)
         elif strategy == "heading":
-            chunks = heading_chunking(text)
+            chunks = heading_chunking(text, file_type)
         elif strategy == "page" and file_type != "pdf":
             # For non-PDF files, fall back to paragraph chunking for page strategy
             logger.warning(
                 f"Page-based chunking not supported for {file_type}, falling back to paragraph chunking"
             )
-            chunks = paragraph_chunking(text)
+            chunks = paragraph_chunking(text, file_type)
         else:
             raise ValueError(f"Unknown chunking strategy: {strategy}")
+
+    chunks = preserve_reading_order_in_chunks(chunks, file_type)
 
     # Calculate statistics
     total_chunks = len(chunks)
@@ -100,11 +103,11 @@ def process_document_chunking(
 def _extract_text_by_type(file_path: str, file_type: str) -> str:
     """
     Extract text based on file type.
-    
+
     Args:
         file_path: Path to the document file or URL
         file_type: Type of document
-        
+
     Returns:
         Extracted text content
     """
@@ -118,6 +121,9 @@ def _extract_text_by_type(file_path: str, file_type: str) -> str:
         return extract_text_from_html(file_path)
     elif file_type == "markdown":
         return extract_text_from_markdown_file(file_path)
+    elif file_type == "json":
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
     elif file_type == "url":
         return extract_text_from_url(file_path)
     else:

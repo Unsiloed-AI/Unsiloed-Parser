@@ -1,6 +1,7 @@
 import os
 import base64
 import json
+import re
 from typing import List, Dict, Any
 from openai import OpenAI
 import logging
@@ -515,22 +516,47 @@ def extract_text_from_html(html_path: str) -> str:
 
 def extract_text_from_markdown_file(markdown_path: str) -> str:
     """
-    Extract text from a markdown file.
-    
+    Extract text from a markdown file with enhanced reading order preservation.
+
     Args:
         markdown_path: Path to the markdown file
-        
+
     Returns:
-        Extracted text content
+        Extracted text content with preserved structure
     """
     try:
         logger.info(f"Extracting text from markdown file: {markdown_path}")
         text = extract_text_from_markdown(markdown_path)
         logger.info(f"Successfully extracted {len(text)} characters from markdown file")
+
+        if not _validate_markdown_structure(text):
+            logger.warning("Markdown structure may be compromised during extraction")
+
         return text
     except Exception as e:
         logger.error(f"Error extracting text from markdown file {markdown_path}: {str(e)}")
         raise
+
+
+def _validate_markdown_structure(text: str) -> bool:
+    """
+    Validate that markdown structure is preserved in extracted text.
+
+    Args:
+        text: Extracted markdown text
+
+    Returns:
+        True if structure appears intact, False otherwise
+    """
+    lines = text.split('\n')
+
+    has_headings = any(re.match(r'^#{1,6}\s+', line.strip()) for line in lines)
+    has_lists = any(re.match(r'^[\d\*\-\+]\s+', line.strip()) for line in lines)
+    has_code_blocks = '```' in text
+
+    structure_indicators = has_headings or has_lists or has_code_blocks
+
+    return structure_indicators or len(lines) < 10
 
 
 def extract_text_from_url(url: str) -> str:
