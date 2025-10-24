@@ -5,7 +5,7 @@
 
 <div align="center">
 
-# Unsiloed AI | AI Agents for Unstructured Financial Data
+# Unsiloed AI | AI Agents for Unstructured Data
 
 **Transform unstructured data into LLM-ready structured assets for RAG and workflow automation**
 
