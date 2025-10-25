@@ -21,10 +21,10 @@ PDF parser, OCR extraction, document AI, text chunking library
 **Transform unstructured data into structured LLM assets for RAG and automation.**
 
 <p align="center">
+  <img src="https://img.shields.io/pypi/v/unsiloed-parser?style=flat-square" alt="PyPI Version">
   <img src="https://img.shields.io/pypi/pyversions/unsiloed-parser?style=flat-square" alt="Python Version 3.8+">
   <img src="https://img.shields.io/github/license/Unsiloed-AI/Unsiloed-Parser?style=flat-square" alt="Apache 2.0 License">
   <img src="https://img.shields.io/github/stars/Unsiloed-AI/Unsiloed-Parser?style=flat-square" alt="GitHub Stars">
-  <img src="https://img.shields.io/pypi/dm/unsiloed-parser?style=flat-square" alt="Monthly PyPI Downloads">
 </p>
 
 **unsiloed-parser** is an open-source Python library for **intelligent 
