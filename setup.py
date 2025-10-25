@@ -4,14 +4,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="Unsiloed",
+    name="unsiloed-parser",
     version="0.1.3",
     author="Unsiloed AI",
     author_email="hello@unsiloed-ai.com",
-    description="A super simple way to extract text from documents for for intelligent document chunking and parsing with multi-threaded processing capabilities",
+    description="Unsiloed Parser: Open-source Python library for advanced document chunking. Transform PDFs, DOCX, images, and more into LLM-ready chunks using semantic AI, YOLO segmentation, and OCR for RAG pipelines and workflow automation.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Unsiloed-AI/Unsiloed-chunker",
+    url="https://github.com/Unsiloed-AI/Unsiloed-Parser",
     packages=find_packages(include=["Unsiloed", "Unsiloed.*"]),
     include_package_data=True,
     classifiers=[
