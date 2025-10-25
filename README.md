@@ -63,8 +63,6 @@ and automated document processing workflows.
 - [Multi-lingual Support](#multi-lingual-support)
 - [Extended File Format Support](#extended-file-format-support)
 - [Configuration](#configuration)
-- [Constraints & Limitations](#constraints--limitations)
-- [Request Parameters](#request-parameters)
 - [Installation](#installation)
 - [Environment Setup](#environment-setup)
 - [Usage](#usage)
@@ -139,32 +137,6 @@ Images, Webpages
 
 ### Environmental Variables
 - `OPENAI_API_KEY`: Your OpenAI API key for **semantic chunking**
-
-## ⚠️ Constraints & Limitations
-
-### File Handling
-- Temporary files are created during processing and deleted 
-  afterward
-- Files are processed in-memory where possible
-
-### Text Processing
-- Long text (>25,000 characters) is automatically split and 
-  processed in parallel for **semantic chunking**
-- Maximum token limit of 4000 for OpenAI responses
-
-
-## 🔧 Request Parameters
-
-### Document Chunking Endpoint
-
-- `document_file`: The document file to process 
-  (PDF, DOCX, PPTX)
-- `strategy`: Chunking strategy to use (default: **"semantic"**)
-  - Options: "fixed", "page", "semantic", "paragraph", "heading"
-- `chunk_size`: Size of chunks for **fixed strategy** in 
-  characters (default: 1000)
-- `overlap`: Overlap size for **fixed strategy** in characters 
-  (default: 100)
 
 ## 📦 Installation
 
