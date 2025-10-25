@@ -30,9 +30,6 @@ PDF parser, OCR extraction, document AI, text chunking library
 **unsiloed-parser** is an open-source Python library for **intelligent 
 document chunking** and **AI-powered text extraction**. 
 
-Transform PDFs, DOCX files, images, webpages, and more into 
-**LLM-ready chunks** using advanced **semantic AI**, **YOLO segmentation**, 
-and **OCR technology**. 
 
 Perfect for building **RAG pipelines**, AI chatbots, knowledge bases, 
 and automated document processing workflows.
@@ -155,9 +152,6 @@ Images, Webpages
   processed in parallel for **semantic chunking**
 - Maximum token limit of 4000 for OpenAI responses
 
-### API Constraints
-- Request timeout set to 60 seconds
-- Maximum of 3 retries for OpenAI API calls
 
 ## 🔧 Request Parameters
 
@@ -194,14 +188,6 @@ source venv/bin/activate
 # Install unsiloed-parser
 pip install unsiloed-parser
 ```
-
-> 📌 **Important Note:** 
-> - **Install** with: `pip install unsiloed-parser`
-> - **Import** in Python as: `import Unsiloed`
-> ```python
-> import Unsiloed
-> result = Unsiloed.process_sync({...})
-> ```
 
 ### Requirements
 

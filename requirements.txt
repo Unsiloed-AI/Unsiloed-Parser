@@ -19,3 +19,4 @@ lxml
 html2text
 aiohttp
 validators
+huggingface-hub

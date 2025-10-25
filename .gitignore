@@ -172,3 +172,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# YOLO model (109MB - auto-downloaded)
+Unsiloed/models/*.pt
