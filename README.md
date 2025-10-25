@@ -141,31 +141,6 @@ Images, Webpages
 ### Environmental Variables
 - `OPENAI_API_KEY`: Your OpenAI API key for **semantic chunking**
 
-## ⚠️ Constraints & Limitations
-
-### File Handling
-- Temporary files are created during processing and deleted 
-  afterward
-- Files are processed in-memory where possible
-
-### Text Processing
-- Long text (>25,000 characters) is automatically split and 
-  processed in parallel for **semantic chunking**
-- Maximum token limit of 4000 for OpenAI responses
-
-
-## 🔧 Request Parameters
-
-### Document Chunking Endpoint
-
-- `document_file`: The document file to process 
-  (PDF, DOCX, PPTX)
-- `strategy`: Chunking strategy to use (default: **"semantic"**)
-  - Options: "fixed", "page", "semantic", "paragraph", "heading"
-- `chunk_size`: Size of chunks for **fixed strategy** in 
-  characters (default: 1000)
-- `overlap`: Overlap size for **fixed strategy** in characters 
-  (default: 100)
 
 ## 📦 Installation
 
@@ -249,7 +224,7 @@ load_dotenv()  # This loads the variables from .env
 
 ## 💻 Usage
 
-### Example 1: Semantic Chunking (Default) 🧠
+### Example 1: Semantic Chunking
 
 ```python
 import os
