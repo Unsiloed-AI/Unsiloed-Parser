@@ -267,40 +267,69 @@ result = Unsiloed.process_sync({
 print(result)
 ```
 
-**Example Output:**
+**Example Output (Semantic Chunking):**
 ```json
 {
+  "file_type": "pdf",
+  "strategy": "semantic",
+  "total_chunks": 98,
+  "avg_chunk_size": 305.05,
   "chunks": [
     {
-      "content": "Introduction to Machine Learning\n\nMachine learning is a subset of artificial intelligence...",
+      "text": "Introduction to Machine Learning",
       "metadata": {
-        "type": "text",
-        "page": 1,
-        "position": 0
+        "page_number": 1,
+        "semantic_group_index": 0,
+        "element_count": 1,
+        "primary_element_type": "Section-header",
+        "avg_confidence": 0.92,
+        "combined_bbox": [100, 50, 500, 120],
+        "strategy": "semantic_openai_boundary_detection",
+        "split_confidence": 0.95,
+        "reading_order_start": 0,
+        "reading_order_end": 0,
+        "constituent_elements": [
+          {
+            "element_type": "Section-header",
+            "bbox": [100, 50, 500, 120],
+            "reading_order": "page_1_element_0"
+          }
+        ]
       }
     },
     {
-      "content": "[Image: Neural Network Diagram]",
+      "text": "Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience...",
       "metadata": {
-        "type": "image",
-        "page": 1,
-        "position": 1
+        "page_number": 1,
+        "semantic_group_index": 1,
+        "element_count": 2,
+        "primary_element_type": "Text",
+        "avg_confidence": 0.89,
+        "combined_bbox": [100, 150, 800, 400]
       }
     },
     {
-      "content": "Table: Model Comparison\n| Model | Accuracy | Speed |\n| ----- | -------- | ----- |\n| CNN   | 95%      | Fast  |",
+      "text": "The image shows a neural network architecture with multiple layers...",
       "metadata": {
-        "type": "table",
-        "page": 2,
-        "position": 0
+        "page_number": 2,
+        "semantic_group_index": 2,
+        "primary_element_type": "Picture",
+        "avg_confidence": 0.94,
+        "combined_bbox": [100, 200, 700, 600]
+      }
+    },
+    {
+      "text": "```markdown\n| Model | Accuracy | Speed |\n|-------|----------|-------|\n| CNN   | 95%      | Fast  |\n```",
+      "metadata": {
+        "page_number": 3,
+        "semantic_group_index": 3,
+        "primary_element_type": "Table",
+        "primary_content_type": "table",
+        "avg_confidence": 0.91,
+        "combined_bbox": [150, 100, 850, 500]
       }
     }
-  ],
-  "metadata": {
-    "total_chunks": 3,
-    "file_type": "pdf",
-    "processing_time": 2.5
-  }
+  ]
 }
 ```
 
