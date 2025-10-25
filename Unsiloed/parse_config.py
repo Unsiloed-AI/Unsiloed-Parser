@@ -1,4 +1,9 @@
-MODEL_PATH = "Unsiloed/models/yolov11_5_x_best.pt"
+import os
+
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(_current_dir, "models")
+MODEL_PATH = os.path.join(MODEL_DIR, "yolov11_5_x_best.pt")
+
 _model = None
 
 

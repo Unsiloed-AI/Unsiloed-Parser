@@ -30,9 +30,6 @@ PDF parser, OCR extraction, document AI, text chunking library
 **unsiloed-parser** is an open-source Python library for **intelligent 
 document chunking** and **AI-powered text extraction**. 
 
-Transform PDFs, DOCX files, images, webpages, and more into 
-**LLM-ready chunks** using advanced **semantic AI**, **YOLO segmentation**, 
-and **OCR technology**. 
 
 Perfect for building **RAG pipelines**, AI chatbots, knowledge bases, 
 and automated document processing workflows.
@@ -155,9 +152,6 @@ Images, Webpages
   processed in parallel for **semantic chunking**
 - Maximum token limit of 4000 for OpenAI responses
 
-### API Constraints
-- Request timeout set to 60 seconds
-- Maximum of 3 retries for OpenAI API calls
 
 ## 🔧 Request Parameters
 
@@ -202,6 +196,28 @@ pip install unsiloed-parser
 > import Unsiloed
 > result = Unsiloed.process_sync({...})
 > ```
+
+### YOLO Model (For Semantic Chunking)
+
+For **semantic chunking** (YOLO-based segmentation), the package **automatically downloads** a custom-trained YOLO model (~109MB) from HuggingFace on first use.
+
+**How it works:**
+1. ✅ Install package: `pip install unsiloed-parser`
+2. ✅ First time using semantic chunking → model auto-downloads (one-time, ~30 seconds)
+3. ✅ Future runs → instant loading from cache
+
+```python
+# First time using semantic chunking
+result = Unsiloed.process_sync({
+    "strategy": "semantic",
+    "file_path": "document.pdf",
+    ...
+})
+# 📥 Downloading YOLO model from HuggingFace (109MB)...
+# ✅ Model downloaded and cached successfully
+```
+
+> 💡 **Note:** Other strategies (`fixed`, `page`, `paragraph`) work instantly without downloading anything.
 
 ### Requirements
 

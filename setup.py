@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="unsiloed-parser",
-    version="0.1.3",
+    version="0.1.4",
     author="Unsiloed AI",
     author_email="hello@unsiloed-ai.com",
     description="Unsiloed Parser: Open-source Python library for advanced document chunking. Transform PDFs, DOCX, images, and more into LLM-ready chunks using semantic AI, YOLO segmentation, and OCR for RAG pipelines and workflow automation.",
@@ -42,6 +42,7 @@ setup(
         "html2text",
         "aiohttp",
         "validators",
+        "huggingface-hub",
     ],
     entry_points={
         "console_scripts": [
