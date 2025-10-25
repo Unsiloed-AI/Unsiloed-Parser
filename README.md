@@ -57,22 +57,25 @@ and automated document processing workflows.
 
 ##  Table of Contents
 
-- [Document Chunking](#document-chunking)
-- [Local LLM Model Support](#local-llm-model-support)
-- [LaTeX Support](#latex-support)
-- [Multi-lingual Support](#multi-lingual-support)
-- [Extended File Format Support](#extended-file-format-support)
-- [Configuration](#configuration)
-- [Installation](#installation)
-- [Environment Setup](#environment-setup)
-- [Usage](#usage)
-  - [Supported File Types](#supported-file-types)
-  - [Chunking Strategies](#chunking-strategies)
-  - [Credential Options](#credential-options)
-- [Development Setup](#development-setup)
-- [Contributing](#contributing)
-- [License](#license)
-- [Community and Support](#community-and-support)
+- [Features](#-features)
+  - [Document Chunking](#-document-chunking)
+  - [Local LLM Model Support](#-local-llm-model-support)
+  - [LaTeX Support](#-latex-support)
+  - [Multi-lingual Support](#-multi-lingual-support)
+  - [Extended File Format Support](#-extended-file-format-support)
+- [Configuration](#️-configuration)
+- [Constraints & Limitations](#️-constraints--limitations)
+- [Request Parameters](#-request-parameters)
+- [Installation](#-installation)
+- [Environment Setup](#-environment-setup)
+- [Usage](#-usage)
+  - [Supported File Types](#-supported-file-types)
+  - [Chunking Strategies](#-chunking-strategies)
+  - [Credential Options](#--credential-options)
+- [Development Setup](#️-development-setup)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Community and Support](#-community-and-support)
 - [Connect with Us](#-connect-with-us)
 
 ---
@@ -137,6 +140,7 @@ Images, Webpages
 
 ### Environmental Variables
 - `OPENAI_API_KEY`: Your OpenAI API key for **semantic chunking**
+
 
 ## 📦 Installation
 
@@ -220,7 +224,7 @@ load_dotenv()  # This loads the variables from .env
 
 ## 💻 Usage
 
-### Example 1: Semantic Chunking (Default) 🧠
+### Example 1: Semantic Chunking
 
 ```python
 import os
