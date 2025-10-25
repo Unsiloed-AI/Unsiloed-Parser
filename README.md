@@ -189,36 +189,6 @@ source venv/bin/activate
 pip install unsiloed-parser
 ```
 
-> 📌 **Important Note:** 
-> - **Install** with: `pip install unsiloed-parser`
-> - **Import** in Python as: `import Unsiloed`
-> ```python
-> import Unsiloed
-> result = Unsiloed.process_sync({...})
-> ```
-
-### YOLO Model (For Semantic Chunking)
-
-For **semantic chunking** (YOLO-based segmentation), the package **automatically downloads** a custom-trained YOLO model (~109MB) from HuggingFace on first use.
-
-**How it works:**
-1. ✅ Install package: `pip install unsiloed-parser`
-2. ✅ First time using semantic chunking → model auto-downloads (one-time, ~30 seconds)
-3. ✅ Future runs → instant loading from cache
-
-```python
-# First time using semantic chunking
-result = Unsiloed.process_sync({
-    "strategy": "semantic",
-    "file_path": "document.pdf",
-    ...
-})
-# 📥 Downloading YOLO model from HuggingFace (109MB)...
-# ✅ Model downloaded and cached successfully
-```
-
-> 💡 **Note:** Other strategies (`fixed`, `page`, `paragraph`) work instantly without downloading anything.
-
 ### Requirements
 
 unsiloed-parser requires Python 3.8 or higher and has the following dependencies:
